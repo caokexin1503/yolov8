@@ -16,13 +16,17 @@ Examples:
     >>> torch.onnx.export(m, x, f)
     >>> subprocess.run(f"onnxslim {f} {f} && open {f}", shell=True, check=True)  # pip install onnxslim
 """
-from ..Extramodules.eca import ECA
+
 from ultralytics.nn.Extramodules.swin_transformer import (
-    C3STR, SwinTransformerBlock, SwinTransformerLayer, WindowAttention, Mlp
+    C3STR,
+    Mlp,
+    SwinTransformerBlock,
+    SwinTransformerLayer,
+    WindowAttention,
 )
 from ultralytics.nn.modules.odconv import C2f_OD
-from .C2f_dsconv import C2f_DSConv
 
+from ..Extramodules.eca import ECA
 from .block import (
     C1,
     C2,
@@ -42,8 +46,11 @@ from .block import (
     Attention,
     BNContrastiveHead,
     Bottleneck,
+    Bottleneck_DConv,
     BottleneckCSP,
     C2f,
+    C2f_DCN,
+    C2f_DConv,
     C2fAttn,
     C2fCIB,
     C2fPSA,
@@ -66,10 +73,8 @@ from .block import (
     SCDown,
     TorchVision,
     psa,
-    C2f_DCN,
-    C2f_DConv,
-    Bottleneck_DConv,
 )
+from .C2f_dsconv import C2f_DSConv
 from .conv import (
     CBAM,
     ChannelAttention,
@@ -77,6 +82,7 @@ from .conv import (
     Conv,
     Conv2,
     ConvTranspose,
+    DConv,
     DWConv,
     DWConvTranspose2d,
     Focus,
@@ -85,7 +91,6 @@ from .conv import (
     LightConv,
     RepConv,
     SpatialAttention,
-    DConv,
 )
 from .head import (
     OBB,
@@ -124,10 +129,12 @@ __all__ = (
     "C2",
     "C2PSA",
     "C3",
+    "C3STR",
     "C3TR",
     "CBAM",
     "CIB",
     "DFL",
+    "ECA",
     "ELAN1",
     "MLP",
     "OBB",
@@ -143,10 +150,15 @@ __all__ = (
     "BNContrastiveHead",
     "Bottleneck",
     "BottleneckCSP",
+    "Bottleneck_DConv",
     "C2f",
     "C2fAttn",
     "C2fCIB",
     "C2fPSA",
+    "C2f_DCN",
+    "C2f_DConv",
+    "C2f_DSConv",
+    "C2f_OD",
     "C3Ghost",
     "C3k2",
     "C3x",
@@ -159,6 +171,7 @@ __all__ = (
     "Conv",
     "Conv2",
     "ConvTranspose",
+    "DConv",
     "DWConv",
     "DWConvTranspose2d",
     "DeformableTransformerDecoder",
@@ -177,6 +190,7 @@ __all__ = (
     "MLPBlock",
     "MSDeformAttn",
     "MaxSigmoidAttnBlock",
+    "Mlp",
     "Pose",
     "Pose26",
     "Proto",
@@ -191,26 +205,17 @@ __all__ = (
     "Segment26",
     "SemanticSegment",
     "SpatialAttention",
+    "SwinTransformerBlock",
+    "SwinTransformerLayer",
     "TorchVision",
     "TransformerBlock",
     "TransformerEncoderLayer",
     "TransformerLayer",
+    "WindowAttention",
     "WorldDetect",
     "YOLOEDetect",
     "YOLOESegment",
     "YOLOESegment26",
-    "v10Detect",
     "psa",
-    "ECA",
-    'C3STR',
-    'SwinTransformerBlock',
-    'SwinTransformerLayer',
-    'WindowAttention',
-    'Mlp',
-    "C2f_DCN",
-    "C2f_OD",
-    "C2f_DSConv",
-    "DConv",
-    "C2f_DConv",
-    "Bottleneck_DConv",
+    "v10Detect",
 )
