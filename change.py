@@ -1,4 +1,5 @@
 import os
+
 from PIL import Image
 
 # ==================== 路径设置（请确认） ====================
@@ -6,8 +7,9 @@ LABEL_DIR = r"C:\Users\caoke\Desktop\ultralytics-main\datasets\data\labels\val"
 IMAGE_DIR = r"C:\Users\caoke\Desktop\ultralytics-main\datasets\data\images\val"
 # ==========================================================
 
+
 def convert_single_file(txt_path, img_w, img_h):
-    with open(txt_path, 'r') as f:
+    with open(txt_path) as f:
         lines = f.readlines()
 
     new_lines = []
@@ -15,7 +17,7 @@ def convert_single_file(txt_path, img_w, img_h):
         line = line.strip()
         if not line:
             continue
-        parts = line.split(',')
+        parts = line.split(",")
         if len(parts) < 8:
             continue
 
@@ -47,8 +49,9 @@ def convert_single_file(txt_path, img_w, img_h):
         new_lines.append(f"{class_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}")
 
     # 覆盖原文件
-    with open(txt_path, 'w') as f:
-        f.write('\n'.join(new_lines))
+    with open(txt_path, "w") as f:
+        f.write("\n".join(new_lines))
+
 
 def main():
     if not os.path.isdir(LABEL_DIR):
@@ -59,8 +62,8 @@ def main():
         return
 
     # 支持的图片后缀
-    img_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff']
-    txt_files = [f for f in os.listdir(LABEL_DIR) if f.endswith('.txt')]
+    img_exts = [".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"]
+    txt_files = [f for f in os.listdir(LABEL_DIR) if f.endswith(".txt")]
 
     for filename in txt_files:
         base = os.path.splitext(filename)[0]
@@ -83,6 +86,7 @@ def main():
         print(f"已转换: {filename}")
 
     print("全部转换完成！")
+
 
 if __name__ == "__main__":
     main()
