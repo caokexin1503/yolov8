@@ -176,7 +176,7 @@ def bbox_iou(
             # 角度成本（已修正）
             sin_alpha_1 = s_cw.abs() / sigma
             sin_alpha_2 = s_ch.abs() / sigma
-            threshold = 2 ** 0.5 / 2
+            threshold = 2**0.5 / 2
             sin_alpha = torch.where(sin_alpha_1 > threshold, sin_alpha_1, sin_alpha_2)
             sin_alpha = sin_alpha.clamp(-1 + eps, 1 - eps)
             angle_cost = 1 - 2 * torch.sin(torch.asin(sin_alpha) - math.pi / 4).pow(2)
