@@ -1,13 +1,14 @@
 import torch
+import torch.autograd
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.autograd
+
 from .conv import Conv
 
 
 class Attention(nn.Module):
     def __init__(self, in_planes, out_planes, kernel_size=3, groups=1, reduction=0.0625, kernel_num=4, min_channel=16):
-        super(Attention, self).__init__()
+        super().__init__()
         attention_channel = max(int(in_planes * reduction), min_channel)
         self.kernel_size = kernel_size
         self.kernel_num = kernel_num
@@ -44,7 +45,7 @@ class Attention(nn.Module):
     def _initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             if isinstance(m, nn.BatchNorm2d):
@@ -84,9 +85,19 @@ class Attention(nn.Module):
 
 
 class ODConv2d(nn.Module):
-    def __init__(self, in_planes, out_planes, kernel_size, stride=1, padding=1, dilation=1, groups=1,
-                 reduction=0.0625, kernel_num=4):
-        super(ODConv2d, self).__init__()
+    def __init__(
+        self,
+        in_planes,
+        out_planes,
+        kernel_size,
+        stride=1,
+        padding=1,
+        dilation=1,
+        groups=1,
+        reduction=0.0625,
+        kernel_num=4,
+    ):
+        super().__init__()
         in_planes = in_planes
         self.in_planes = in_planes
         self.out_planes = out_planes
@@ -96,10 +107,12 @@ class ODConv2d(nn.Module):
         self.dilation = dilation
         self.groups = groups
         self.kernel_num = kernel_num
-        self.attention = Attention(in_planes, out_planes, kernel_size, groups=groups,
-                                   reduction=reduction, kernel_num=kernel_num)
-        self.weight = nn.Parameter(torch.randn(kernel_num, out_planes, in_planes // groups, kernel_size, kernel_size),
-                                   requires_grad=True)
+        self.attention = Attention(
+            in_planes, out_planes, kernel_size, groups=groups, reduction=reduction, kernel_num=kernel_num
+        )
+        self.weight = nn.Parameter(
+            torch.randn(kernel_num, out_planes, in_planes // groups, kernel_size, kernel_size), requires_grad=True
+        )
         self._initialize_weights()
 
         if self.kernel_size == 1 and self.kernel_num == 1:
@@ -109,7 +122,7 @@ class ODConv2d(nn.Module):
 
     def _initialize_weights(self):
         for i in range(self.kernel_num):
-            nn.init.kaiming_normal_(self.weight[i], mode='fan_out', nonlinearity='relu')
+            nn.init.kaiming_normal_(self.weight[i], mode="fan_out", nonlinearity="relu")
 
     def update_temperature(self, temperature):
         self.attention.update_temperature(temperature)
@@ -118,23 +131,38 @@ class ODConv2d(nn.Module):
         # Multiplying channel attention (or filter attention) to weights and feature maps are equivalent,
         # while we observe that when using the latter method the models will run faster with less gpu memory cost.
         channel_attention, filter_attention, spatial_attention, kernel_attention = self.attention(x)
-        batch_size, in_planes, height, width = x.size()
+        batch_size, _in_planes, height, width = x.size()
         x = x * channel_attention
         x = x.reshape(1, -1, height, width)
         aggregate_weight = spatial_attention * kernel_attention * self.weight.unsqueeze(dim=0)
         aggregate_weight = torch.sum(aggregate_weight, dim=1).view(
-            [-1, self.in_planes // self.groups, self.kernel_size, self.kernel_size])
-        output = F.conv2d(x, weight=aggregate_weight, bias=None, stride=self.stride, padding=self.padding,
-                          dilation=self.dilation, groups=self.groups * batch_size)
+            [-1, self.in_planes // self.groups, self.kernel_size, self.kernel_size]
+        )
+        output = F.conv2d(
+            x,
+            weight=aggregate_weight,
+            bias=None,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups * batch_size,
+        )
         output = output.view(batch_size, self.out_planes, output.size(-2), output.size(-1))
         output = output * filter_attention
         return output
 
     def _forward_impl_pw1x(self, x):
-        channel_attention, filter_attention, spatial_attention, kernel_attention = self.attention(x)
+        channel_attention, filter_attention, _spatial_attention, _kernel_attention = self.attention(x)
         x = x * channel_attention
-        output = F.conv2d(x, weight=self.weight.squeeze(dim=0), bias=None, stride=self.stride, padding=self.padding,
-                          dilation=self.dilation, groups=self.groups)
+        output = F.conv2d(
+            x,
+            weight=self.weight.squeeze(dim=0),
+            bias=None,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
         output = output * filter_attention
         return output
 
@@ -150,7 +178,7 @@ class Bottleneck_OD(nn.Module):
         super().__init__()
         c_ = int(c2 * e)  # hidden channels
         self.cv1 = Conv(c1, c_, k[0], 1)
-        self.cv2 = ODConv2d(c_, c2,  k[1][0], 1, groups=g)
+        self.cv2 = ODConv2d(c_, c2, k[1][0], 1, groups=g)
         self.add = shortcut and c1 == c2
 
     def forward(self, x):
@@ -182,17 +210,15 @@ class C2f_OD(nn.Module):
         return self.cv2(torch.cat(y, 1))
 
 
-
-if __name__ =='__main__':
-    stars_Block =ODConv2d(128,256,3)
-    #创建一个输入张量，形状为(batch_size, H*W,C)
+if __name__ == "__main__":
+    stars_Block = ODConv2d(128, 256, 3)
+    # 创建一个输入张量，形状为(batch_size, H*W,C)
     batch_size = 8
-    input_tensor=torch.randn(batch_size, 128, 64, 64 )
-    #运行模型并打印输入和输出的形状
-    output_tensor =stars_Block(input_tensor)
-    print("Input shape:",input_tensor.shape)
-    print("0utput shape:",output_tensor.shape)
-
+    input_tensor = torch.randn(batch_size, 128, 64, 64)
+    # 运行模型并打印输入和输出的形状
+    output_tensor = stars_Block(input_tensor)
+    print("Input shape:", input_tensor.shape)
+    print("0utput shape:", output_tensor.shape)
 
 
 # # Ultralytics YOLO 🚀, AGPL-3.0 license
