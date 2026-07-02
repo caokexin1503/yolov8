@@ -265,6 +265,7 @@ class Detect(nn.Module):
 # 耦合头
 class CoupledDetect(nn.Module):
     """Coupled detection head for YOLOv8. Merges cv2/cv3 into one shared conv branch."""
+
     dynamic = False
     export = False
     format = None
@@ -290,11 +291,7 @@ class CoupledDetect(nn.Module):
         c_shared = max(c2, c3)
 
         self.cv_shared = nn.ModuleList(
-            nn.Sequential(
-                Conv(x, c_shared, 3),
-                Conv(c_shared, c_shared, 3),
-                nn.Conv2d(c_shared, self.no, 1)
-            )
+            nn.Sequential(Conv(x, c_shared, 3), Conv(c_shared, c_shared, 3), nn.Conv2d(c_shared, self.no, 1))
             for x in ch
         )
         self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
@@ -313,8 +310,8 @@ class CoupledDetect(nn.Module):
             boxes_list, scores_list = [], []
             for i in range(self.nl):
                 out = self.cv_shared[i](x[i])  # (bs, no, h, w)
-                box_feat = out[:, :4*self.reg_max].reshape(bs, 4*self.reg_max, -1)
-                score_feat = out[:, 4*self.reg_max:].reshape(bs, self.nc, -1)
+                box_feat = out[:, : 4 * self.reg_max].reshape(bs, 4 * self.reg_max, -1)
+                score_feat = out[:, 4 * self.reg_max :].reshape(bs, self.nc, -1)
                 boxes_list.append(box_feat)
                 scores_list.append(score_feat)
             boxes = torch.cat(boxes_list, dim=-1)
@@ -322,7 +319,7 @@ class CoupledDetect(nn.Module):
             return {"boxes": boxes, "scores": scores, "feats": x}
         else:
             bs = x[0].shape[0]
-            boxes = torch.cat([box_head[i](x[i]).view(bs, 4*self.reg_max, -1) for i in range(self.nl)], dim=-1)
+            boxes = torch.cat([box_head[i](x[i]).view(bs, 4 * self.reg_max, -1) for i in range(self.nl)], dim=-1)
             scores = torch.cat([cls_head[i](x[i]).view(bs, self.nc, -1) for i in range(self.nl)], dim=-1)
             return {"boxes": boxes, "scores": scores, "feats": x}
 
@@ -352,12 +349,12 @@ class CoupledDetect(nn.Module):
         return dist2bbox(bboxes, anchors, xywh=xywh and not self.end2end and not self.xyxy, dim=1)
 
     def bias_init(self):
-        """初始化共享卷积的偏置，前 reg_max*4 为 box bias，后 nc 为 cls bias。"""
+        """初始化共享卷积的偏置，前 reg_max*4 为 box bias，后 nc 为 cls bias。."""
         for i in range(self.nl):
             conv = self.cv_shared[i][-1]
             b = conv.bias.data
-            b[:4*self.reg_max] = 2.0
-            b[4*self.reg_max:] = math.log(5 / self.nc / (640 / self.stride[i])**2)
+            b[: 4 * self.reg_max] = 2.0
+            b[4 * self.reg_max :] = math.log(5 / self.nc / (640 / self.stride[i]) ** 2)
 
     def postprocess(self, preds):
         boxes, scores = preds.split([4, self.nc], dim=-1)
@@ -378,7 +375,6 @@ class CoupledDetect(nn.Module):
         scores, index = scores.flatten(1).topk(k)
         idx = ori_index[torch.arange(batch_size)[..., None], index // nc]
         return scores[..., None], (index % nc)[..., None].float(), idx
-
 
 
 class Segment(Detect):

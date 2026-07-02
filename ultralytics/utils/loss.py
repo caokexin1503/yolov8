@@ -18,17 +18,14 @@ from ultralytics.utils.torch_utils import autocast
 from .metrics import bbox_iou, probiou
 from .tal import bbox2dist, rbox2dist
 
+
 def quality_focal_loss(pred, target, beta=2.0):
-    """
-    pred: (..., C) logits
-    target: (..., C) 质量标签 (0~1)
-    beta: 聚焦系数
-    returns: (..., C) 每个位置的 QFL 损失
+    """pred: (..., C) logits target: (..., C) 质量标签 (0~1) beta: 聚焦系数 returns: (..., C) 每个位置的 QFL 损失.
     """
     pred_sigmoid = pred.sigmoid()
     modulating_factor = (target - pred_sigmoid).abs().pow(beta)
     modulating_factor = modulating_factor.detach()  # 阻止梯度，仅作权重
-    bce_loss = F.binary_cross_entropy_with_logits(pred, target, reduction='none')
+    bce_loss = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
     return modulating_factor * bce_loss
 
 
@@ -124,7 +121,7 @@ class DFLoss(nn.Module):
 class BboxLoss(nn.Module):
     """Criterion class for computing training losses for bounding boxes."""
 
-    def __init__(self, reg_max: int = 16, iou_type: str = 'ciou'):
+    def __init__(self, reg_max: int = 16, iou_type: str = "ciou"):
         super().__init__()
         self.dfl_loss = DFLoss(reg_max) if reg_max > 1 else None
         self.iou_type = iou_type.lower()  # 保存 IoU 类型
@@ -144,10 +141,10 @@ class BboxLoss(nn.Module):
         """Compute IoU and DFL losses for bounding boxes."""
         weight = target_scores.sum(-1)[fg_mask].unsqueeze(-1)
         iou_flags = {
-            'ciou': {'CIoU': True},
-            'diou': {'DIoU': True},
-            'giou': {'GIoU': True},
-            'siou': {'SIoU': True},  # 我们新加的
+            "ciou": {"CIoU": True},
+            "diou": {"DIoU": True},
+            "giou": {"GIoU": True},
+            "siou": {"SIoU": True},  # 我们新加的
         }
         # 如果 iou_type 不在字典里，就只计算普通 IoU（所有 flag 为 False）
         flags = iou_flags.get(self.iou_type, {})
@@ -367,10 +364,10 @@ class v8DetectionLoss:
         h = model.args  # hyperparameters
 
         m = model.model[-1]  # Detect() module
-        self.bce = nn.BCEWithLogitsLoss(reduction='none')  # 仍用于置信度损失
+        self.bce = nn.BCEWithLogitsLoss(reduction="none")  # 仍用于置信度损失
         self.focal_loss = FocalLoss(alpha=0.25, gamma=2.0)  # 新增：用于分类损失 新增！
         self.hyp = h
-        self.iou_type = getattr(h, 'iou_type', 'ciou').lower()
+        self.iou_type = getattr(h, "iou_type", "ciou").lower()
         self.stride = m.stride  # model strides
         self.nc = m.nc  # number of classes
         self.no = m.nc + m.reg_max * 4
@@ -464,7 +461,7 @@ class v8DetectionLoss:
             # 正样本的目标分数最大值（每个正样本取它对应类别的得分）
             pos_scores = target_scores[fg_mask].max(dim=1).values  # [num_pos]
             # 每个 GT 分配到的正样本数
-            unique_gt, counts = target_gt_idx[fg_mask].unique(return_counts=True)
+            _unique_gt, counts = target_gt_idx[fg_mask].unique(return_counts=True)
             pos_per_gt = counts.float()
 
             stats = {
@@ -508,8 +505,6 @@ class v8DetectionLoss:
         # if self.class_weights is not None:
         #     qfl_loss *= self.class_weights
         # loss[1] = qfl_loss.sum() / target_scores_sum
-
-
 
         # Bbox loss
         if fg_mask.sum():
@@ -1460,9 +1455,6 @@ class SemanticSegmentationLoss(nn.Module):
         return total * preds.shape[0], loss_items
 
 
-
-
-
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.25, gamma=2.0):
         super().__init__()
@@ -1470,10 +1462,10 @@ class FocalLoss(nn.Module):
         self.gamma = gamma
 
     def forward(self, inputs, targets):
-        bce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+        bce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
         p = torch.sigmoid(inputs)
         # 动态 alpha
         alpha_factor = targets * self.alpha + (1 - targets) * (1 - self.alpha)
         # 调制因子 (1 - p_t)^gamma
         modulating_factor = (1 - p * targets - (1 - p) * (1 - targets)) ** self.gamma
-        return alpha_factor * modulating_factor * bce_loss   # 返回未归约的 loss
+        return alpha_factor * modulating_factor * bce_loss  # 返回未归约的 loss

@@ -1,9 +1,6 @@
+import numpy as np
 
 from ultralytics import YOLO
-import torch
-
-
-import numpy as np
 
 
 class SimpleRecorder:
@@ -13,8 +10,8 @@ class SimpleRecorder:
 
     def on_train_batch_end(self, trainer):
         # 从模型内部的 criterion 获取 stats
-        criterion = getattr(trainer.model, 'criterion', None)
-        if criterion is not None and hasattr(criterion, 'current_stats'):
+        criterion = getattr(trainer.model, "criterion", None)
+        if criterion is not None and hasattr(criterion, "current_stats"):
             self.batch_stats.append(criterion.current_stats)
 
     def on_train_epoch_end(self, trainer):
@@ -27,14 +24,15 @@ class SimpleRecorder:
         self.epoch_history.append(avg)
         self.batch_stats = []
         np.save("assign_stats_history.npy", self.epoch_history)
-        print(f"Epoch {trainer.epoch}: "
-              f"fg_ratio={avg['fg_ratio']:.4f}, "
-              f"pos/gt={avg['pos_per_gt_mean']:.1f}, "
-              f"avg_target_score={avg['avg_target_score']:.3f}")
+        print(
+            f"Epoch {trainer.epoch}: "
+            f"fg_ratio={avg['fg_ratio']:.4f}, "
+            f"pos/gt={avg['pos_per_gt_mean']:.1f}, "
+            f"avg_target_score={avg['avg_target_score']:.3f}"
+        )
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     model = YOLO(r"C:\Users\caoke\Desktop\ultralytics-main\ultralytics\cfg\models\v8\yolov8.yaml")
 
     # 创建记录器并注册回调
