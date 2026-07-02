@@ -6,15 +6,12 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import math
-from torchvision.ops import deform_conv2d
 
 from ultralytics.utils.torch_utils import fuse_conv_and_bn
 
-from .conv import Conv, DWConv, GhostConv, LightConv, RepConv, autopad
-from .transformer import TransformerBlock
+from .conv import Conv, DConv, DWConv, GhostConv, LightConv, RepConv, autopad
 from .dcn import DCN
-from .conv import Conv, DConv
+from .transformer import TransformerBlock
 
 __all__ = (
     "C1",
@@ -150,15 +147,15 @@ class HGBlock(nn.Module):
     """
 
     def __init__(
-            self,
-            c1: int,
-            cm: int,
-            c2: int,
-            k: int = 3,
-            n: int = 6,
-            lightconv: bool = False,
-            shortcut: bool = False,
-            act: nn.Module = nn.ReLU(),
+        self,
+        c1: int,
+        cm: int,
+        c2: int,
+        k: int = 3,
+        n: int = 6,
+        lightconv: bool = False,
+        shortcut: bool = False,
+        act: nn.Module = nn.ReLU(),
     ):
         """Initialize HGBlock with specified parameters.
 
@@ -463,7 +460,7 @@ class Bottleneck(nn.Module):
     """Standard bottleneck."""
 
     def __init__(
-            self, c1: int, c2: int, shortcut: bool = True, g: int = 1, k: tuple[int, int] = (3, 3), e: float = 0.5
+        self, c1: int, c2: int, shortcut: bool = True, g: int = 1, k: tuple[int, int] = (3, 3), e: float = 0.5
     ):
         """Initialize a standard bottleneck module.
 
@@ -614,7 +611,7 @@ class MaxSigmoidAttnBlock(nn.Module):
 
         aw = torch.einsum("bmchw,bnmc->bmhwn", embed, guide)
         aw = aw.max(dim=-1)[0]
-        aw = aw / (self.hc ** 0.5)
+        aw = aw / (self.hc**0.5)
         aw = aw + self.bias[None, :, None, None]
         aw = aw.sigmoid() * self.scale
 
@@ -628,16 +625,16 @@ class C2fAttn(nn.Module):
     """C2f module with an additional attn module."""
 
     def __init__(
-            self,
-            c1: int,
-            c2: int,
-            n: int = 1,
-            ec: int = 128,
-            nh: int = 1,
-            gc: int = 512,
-            shortcut: bool = False,
-            g: int = 1,
-            e: float = 0.5,
+        self,
+        c1: int,
+        c2: int,
+        n: int = 1,
+        ec: int = 128,
+        nh: int = 1,
+        gc: int = 512,
+        shortcut: bool = False,
+        g: int = 1,
+        e: float = 0.5,
     ):
         """Initialize C2f module with attention mechanism.
 
@@ -694,7 +691,7 @@ class ImagePoolingAttn(nn.Module):
     """ImagePoolingAttn: Enhance the text embeddings with image-aware information."""
 
     def __init__(
-            self, ec: int = 256, ch: tuple[int, ...] = (), ct: int = 512, nh: int = 8, k: int = 3, scale: bool = False
+        self, ec: int = 256, ch: tuple[int, ...] = (), ct: int = 512, nh: int = 8, k: int = 3, scale: bool = False
     ):
         """Initialize ImagePoolingAttn module.
 
@@ -734,7 +731,7 @@ class ImagePoolingAttn(nn.Module):
         """
         bs = x[0].shape[0]
         assert len(x) == self.nf
-        num_patches = self.k ** 2
+        num_patches = self.k**2
         x = [pool(proj(x)).view(bs, -1, num_patches) for (x, proj, pool) in zip(x, self.projections, self.im_pools)]
         x = torch.cat(x, dim=-1).transpose(1, 2)
         q = self.query(text)
@@ -747,7 +744,7 @@ class ImagePoolingAttn(nn.Module):
         v = v.reshape(bs, -1, self.nh, self.hc)
 
         aw = torch.einsum("bnmc,bkmc->bmnk", q, k)
-        aw = aw / (self.hc ** 0.5)
+        aw = aw / (self.hc**0.5)
         aw = F.softmax(aw, dim=-1)
 
         x = torch.einsum("bmnk,bkmc->bnmc", aw, v)
@@ -834,7 +831,7 @@ class RepBottleneck(Bottleneck):
     """Rep bottleneck."""
 
     def __init__(
-            self, c1: int, c2: int, shortcut: bool = True, g: int = 1, k: tuple[int, int] = (3, 3), e: float = 0.5
+        self, c1: int, c2: int, shortcut: bool = True, g: int = 1, k: tuple[int, int] = (3, 3), e: float = 0.5
     ):
         """Initialize RepBottleneck.
 
@@ -1075,15 +1072,15 @@ class C3k2(C2f):
     """Faster Implementation of CSP Bottleneck with 2 convolutions."""
 
     def __init__(
-            self,
-            c1: int,
-            c2: int,
-            n: int = 1,
-            c3k: bool = False,
-            e: float = 0.5,
-            attn: bool = False,
-            g: int = 1,
-            shortcut: bool = True,
+        self,
+        c1: int,
+        c2: int,
+        n: int = 1,
+        c3k: bool = False,
+        e: float = 0.5,
+        attn: bool = False,
+        g: int = 1,
+        shortcut: bool = True,
     ):
         """Initialize C3k2 module.
 
@@ -1256,7 +1253,7 @@ class C2fCIB(C2f):
     """
 
     def __init__(
-            self, c1: int, c2: int, n: int = 1, shortcut: bool = False, lk: bool = False, g: int = 1, e: float = 0.5
+        self, c1: int, c2: int, n: int = 1, shortcut: bool = False, lk: bool = False, g: int = 1, e: float = 0.5
     ):
         """Initialize C2fCIB module.
 
@@ -1303,7 +1300,7 @@ class Attention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
         self.key_dim = int(self.head_dim * attn_ratio)
-        self.scale = self.key_dim ** -0.5
+        self.scale = self.key_dim**-0.5
         nh_kd = self.key_dim * num_heads
         h = dim + nh_kd * 2
         self.qkv = Conv(dim, h, 1, act=False)
@@ -1598,7 +1595,7 @@ class TorchVision(nn.Module):
     """
 
     def __init__(
-            self, model: str, weights: str = "DEFAULT", unwrap: bool = True, truncate: int = 2, split: bool = False
+        self, model: str, weights: str = "DEFAULT", unwrap: bool = True, truncate: int = 2, split: bool = False
     ):
         """Load the model and weights from torchvision.
 
@@ -1714,7 +1711,7 @@ class AAttn(nn.Module):
             .permute(0, 2, 3, 1)
             .split([self.head_dim, self.head_dim, self.head_dim], dim=2)
         )
-        attn = (q.transpose(-2, -1) @ k) * (self.head_dim ** -0.5)
+        attn = (q.transpose(-2, -1) @ k) * (self.head_dim**-0.5)
         attn = attn.softmax(dim=-1)
         x = v @ attn.transpose(-2, -1)
         x = x.permute(0, 3, 1, 2)
@@ -1821,17 +1818,17 @@ class A2C2f(nn.Module):
     """
 
     def __init__(
-            self,
-            c1: int,
-            c2: int,
-            n: int = 1,
-            a2: bool = True,
-            area: int = 1,
-            residual: bool = False,
-            mlp_ratio: float = 2.0,
-            e: float = 0.5,
-            g: int = 1,
-            shortcut: bool = True,
+        self,
+        c1: int,
+        c2: int,
+        n: int = 1,
+        a2: bool = True,
+        area: int = 1,
+        residual: bool = False,
+        mlp_ratio: float = 2.0,
+        e: float = 0.5,
+        g: int = 1,
+        shortcut: bool = True,
     ):
         """Initialize Area-Attention C2f module.
 
@@ -2080,13 +2077,12 @@ class RealNVP(nn.Module):
 
 # PSA机制
 class Attention(nn.Module):
-    def __init__(self, dim, num_heads=8,
-                 attn_ratio=0.5):
+    def __init__(self, dim, num_heads=8, attn_ratio=0.5):
         super().__init__()
         self.num_heads = num_heads
         self.head_dim = dim // num_heads
         self.key_dim = int(self.head_dim * attn_ratio)
-        self.scale = self.key_dim ** -0.5
+        self.scale = self.key_dim**-0.5
         nh_kd = nh_kd = self.key_dim * num_heads
         h = dim + nh_kd * 2
         self.qkv = Conv(dim, h, 1, act=False)
@@ -2098,11 +2094,10 @@ class Attention(nn.Module):
         N = H * W
         qkv = self.qkv(x)
         q, k, v = qkv.view(B, self.num_heads, self.key_dim * 2 + self.head_dim, N).split(
-            [self.key_dim, self.key_dim, self.head_dim], dim=2)
-
-        attn = (
-                (q.transpose(-2, -1) @ k) * self.scale
+            [self.key_dim, self.key_dim, self.head_dim], dim=2
         )
+
+        attn = (q.transpose(-2, -1) @ k) * self.scale
         attn = attn.softmax(dim=-1)
         x = (v @ attn.transpose(-2, -1)).view(B, C, H, W) + self.pe(v.reshape(B, C, H, W))
         x = self.proj(x)
@@ -2110,19 +2105,15 @@ class Attention(nn.Module):
 
 
 class psa(nn.Module):
-
     def __init__(self, c1, c2, e=0.5):
         super().__init__()
-        assert (c1 == c2)
+        assert c1 == c2
         self.c = int(c1 * e)
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv(2 * self.c, c1, 1)
 
         self.attn = Attention(self.c, attn_ratio=0.5, num_heads=self.c // 64)
-        self.ffn = nn.Sequential(
-            Conv(self.c, self.c * 2, 1),
-            Conv(self.c * 2, self.c, 1, act=False)
-        )
+        self.ffn = nn.Sequential(Conv(self.c, self.c * 2, 1), Conv(self.c * 2, self.c, 1, act=False))
 
     def forward(self, x):
         a, b = self.cv1(x).split((self.c, self.c), dim=1)
@@ -2132,36 +2123,24 @@ class psa(nn.Module):
 
 
 class Bottleneck_DCN(nn.Module):
-    """
-    DCN Bottleneck
-    """
+    """DCN Bottleneck."""
 
     def __init__(
-            self,
-            c1,
-            c2,
-            shortcut=True,
-            g=1,
-            k=(3, 3),
-            e=1.0,
+        self,
+        c1,
+        c2,
+        shortcut=True,
+        g=1,
+        k=(3, 3),
+        e=1.0,
     ):
         super().__init__()
 
         c_ = int(c2 * e)
 
-        self.cv1 = DCN(
-            c1,
-            c_,
-            k=k[0],
-            s=1
-        )
+        self.cv1 = DCN(c1, c_, k=k[0], s=1)
 
-        self.cv2 = DCN(
-            c_,
-            c2,
-            k=k[1],
-            s=1
-        )
+        self.cv2 = DCN(c_, c2, k=k[1], s=1)
 
         self.add = shortcut and c1 == c2
 
@@ -2175,9 +2154,7 @@ class Bottleneck_DCN(nn.Module):
 
 
 class C2f_DCN(nn.Module):
-    """
-    C2f with DCN
-    """
+    """C2f with DCN."""
 
     def __init__(
         self,
@@ -2187,99 +2164,6 @@ class C2f_DCN(nn.Module):
         shortcut=False,
         g=1,
         e=0.5,
-    ):
-        super().__init__()
-
-        self.c = int(c2 * e)
-
-        self.cv1 = Conv(
-            c1,
-            2 * self.c,
-            1,
-            1
-        )
-
-        self.cv2 = Conv(
-            (2 + n) * self.c,
-            c2,
-            1,
-            1
-        )
-
-        self.m = nn.ModuleList(
-            Bottleneck_DCN(
-                self.c,
-                self.c,
-                shortcut,
-                g,
-                e=1.0
-            )
-            for _ in range(n)
-        )
-
-    def forward(self, x):
-
-        y = list(
-            self.cv1(x).chunk(2, 1)
-        )
-
-        y.extend(
-            m(y[-1])
-            for m in self.m
-        )
-
-        return self.cv2(
-            torch.cat(y, 1)
-        )
-
-
-class Bottleneck_DConv(nn.Module):
-    """
-    Bottleneck using Dilated Convolution
-    """
-
-    def __init__(
-        self,
-        c1,
-        c2,
-        shortcut=True,
-        g=1,
-        e=0.5,
-        d=2
-    ):
-        super().__init__()
-
-        c_ = int(c2 * e)
-
-        self.cv1 = Conv(c1, c_, 1, 1)
-
-        self.cv2 = DConv(
-            c_,
-            c2,
-            k=3,
-            s=1,
-            d=d,
-            g=g
-        )
-
-        self.add = shortcut and c1 == c2
-
-    def forward(self, x):
-        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
-
-
-
-class C2f_DConv(nn.Module):
-
-    def __init__(
-        self,
-        c1,
-        c2,
-        n=1,
-        shortcut=False,
-        g=1,
-        e=0.5,
-        d=2
     ):
         super().__init__()
 
@@ -2287,23 +2171,48 @@ class C2f_DConv(nn.Module):
 
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
 
-        self.cv2 = Conv(
-            (2 + n) * self.c,
-            c2,
-            1
-        )
+        self.cv2 = Conv((2 + n) * self.c, c2, 1, 1)
 
-        self.m = nn.ModuleList(
-            Bottleneck_DConv(
-                self.c,
-                self.c,
-                shortcut,
-                g,
-                e=1.0,
-                d=d
-            )
-            for _ in range(n)
-        )
+        self.m = nn.ModuleList(Bottleneck_DCN(self.c, self.c, shortcut, g, e=1.0) for _ in range(n))
+
+    def forward(self, x):
+
+        y = list(self.cv1(x).chunk(2, 1))
+
+        y.extend(m(y[-1]) for m in self.m)
+
+        return self.cv2(torch.cat(y, 1))
+
+
+class Bottleneck_DConv(nn.Module):
+    """Bottleneck using Dilated Convolution."""
+
+    def __init__(self, c1, c2, shortcut=True, g=1, e=0.5, d=2):
+        super().__init__()
+
+        c_ = int(c2 * e)
+
+        self.cv1 = Conv(c1, c_, 1, 1)
+
+        self.cv2 = DConv(c_, c2, k=3, s=1, d=d, g=g)
+
+        self.add = shortcut and c1 == c2
+
+    def forward(self, x):
+        return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+
+
+class C2f_DConv(nn.Module):
+    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5, d=2):
+        super().__init__()
+
+        self.c = int(c2 * e)
+
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)
+
+        self.m = nn.ModuleList(Bottleneck_DConv(self.c, self.c, shortcut, g, e=1.0, d=d) for _ in range(n))
 
     def forward(self, x):
 
