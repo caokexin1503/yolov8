@@ -669,56 +669,24 @@ class Index(nn.Module):
         return x[self.index]
 
 
-
-
-
-
-
-
-
 class DConv(nn.Module):
-    """
-    Dilated Convolution
-    """
+    """Dilated Convolution."""
 
     default_act = nn.SiLU()
 
-    def __init__(
-        self,
-        c1,
-        c2,
-        k=3,
-        s=1,
-        p=None,
-        d=2,
-        g=1,
-        act=True
-    ):
+    def __init__(self, c1, c2, k=3, s=1, p=None, d=2, g=1, act=True):
         super().__init__()
 
         if p is None:
             p = ((k - 1) * d) // 2
 
         self.conv = nn.Conv2d(
-            in_channels=c1,
-            out_channels=c2,
-            kernel_size=k,
-            stride=s,
-            padding=p,
-            dilation=d,
-            groups=g,
-            bias=False
+            in_channels=c1, out_channels=c2, kernel_size=k, stride=s, padding=p, dilation=d, groups=g, bias=False
         )
 
         self.bn = nn.BatchNorm2d(c2)
 
-        self.act = (
-            self.default_act
-            if act is True
-            else act
-            if isinstance(act, nn.Module)
-            else nn.Identity()
-        )
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))
