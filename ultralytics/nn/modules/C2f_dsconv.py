@@ -1,21 +1,20 @@
 import torch
 import torch.nn as nn
+
 from ultralytics.nn.modules.conv import Conv  # 使用官方 Conv
+
 
 class DSConv(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
         # Depthwise conv: groups=in_channels，输出必须等于 in_channels
         self.dwconv = nn.Conv2d(
-            in_channels, in_channels, kernel_size=3, stride=stride,
-            padding=1, groups=in_channels, bias=False
+            in_channels, in_channels, kernel_size=3, stride=stride, padding=1, groups=in_channels, bias=False
         )
         self.bn1 = nn.BatchNorm2d(in_channels)
         self.act1 = nn.ReLU()
         # Pointwise conv: 用 1×1 映射到 out_channels
-        self.pwconv = nn.Conv2d(
-            in_channels, out_channels, kernel_size=1, stride=1, bias=False
-        )
+        self.pwconv = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.act2 = nn.ReLU()
 
