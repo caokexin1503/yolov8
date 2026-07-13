@@ -12,12 +12,7 @@ import torch.nn as nn
 
 from ultralytics.nn.autobackend import check_class_names
 from ultralytics.nn.Extramodules.c2f_se import C2f_SE
-from ultralytics.nn.SEAttention import SEAttention
-from .Extramodules import *
 from ultralytics.nn.modules import *
-from ultralytics.nn.modules.odconv import C2f_OD
-from ultralytics.nn.modules import C2f_DSConv
-from ultralytics.nn.modules.head import Detect, CoupledDetect, Segment, Pose, OBB
 from ultralytics.nn.modules import (
     AIFI,
     C1,
@@ -36,8 +31,12 @@ from ultralytics.nn.modules import (
     AConv,
     ADown,
     Bottleneck,
+    Bottleneck_DConv,
     BottleneckCSP,
     C2f,
+    C2f_DCN,
+    C2f_DConv,
+    C2f_DSConv,
     C2fAttn,
     C2fCIB,
     C2fPSA,
@@ -51,6 +50,7 @@ from ultralytics.nn.modules import (
     Conv,
     Conv2,
     ConvTranspose,
+    DConv,
     Detect,
     DWConv,
     DWConvTranspose2d,
@@ -80,11 +80,10 @@ from ultralytics.nn.modules import (
     YOLOESegment,
     YOLOESegment26,
     v10Detect,
-    C2f_DCN,
-    C2f_DConv,
-    Bottleneck_DConv,
-    DConv,
 )
+from ultralytics.nn.modules.head import OBB, CoupledDetect, Detect, Pose, Segment
+from ultralytics.nn.modules.odconv import C2f_OD
+from ultralytics.nn.SEAttention import SEAttention
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, SETTINGS, WINDOWS, YAML, colorstr, emojis
 from ultralytics.utils.checks import REMOTE_FILE_PREFIXES, check_file, check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import (
@@ -110,6 +109,8 @@ from ultralytics.utils.torch_utils import (
     smart_inference_mode,
     time_sync,
 )
+
+from .Extramodules import *
 
 
 class BaseModel(torch.nn.Module):
@@ -413,7 +414,9 @@ class DetectionModel(BaseModel):
 
         # Build strides
         m = self.model[-1]  # Detect()
-        if isinstance(m, (Detect, CoupledDetect)):  # includes all Detect subclasses like Segment, Pose, OBB, YOLOEDetect, YOLOESegment
+        if isinstance(
+            m, (Detect, CoupledDetect)
+        ):  # includes all Detect subclasses like Segment, Pose, OBB, YOLOEDetect, YOLOESegment
             s = 256  # 2x min stride
             m.inplace = self.inplace
 
@@ -440,7 +443,7 @@ class DetectionModel(BaseModel):
             LOGGER.info("")
 
         # 初始化偏置
-        if hasattr(self.model[-1], 'bias_init'):
+        if hasattr(self.model[-1], "bias_init"):
             self.model[-1].bias_init()
 
     @property
@@ -1826,7 +1829,19 @@ def parse_model(d, ch, verbose=True):
             args.extend([reg_max, end2end, [ch[x] for x in f]])
             if m is Segment or m is YOLOESegment or m is Segment26 or m is YOLOESegment26:
                 args[2] = make_divisible(min(args[2], max_channels) * width, 8)
-            if m in {Detect, CoupledDetect, YOLOEDetect, Segment, Segment26, YOLOESegment, YOLOESegment26, Pose, Pose26, OBB, OBB26}:
+            if m in {
+                Detect,
+                CoupledDetect,
+                YOLOEDetect,
+                Segment,
+                Segment26,
+                YOLOESegment,
+                YOLOESegment26,
+                Pose,
+                Pose26,
+                OBB,
+                OBB26,
+            }:
                 m.legacy = legacy
         elif m is SemanticSegment:
             args.append([ch[x] for x in f])  # nc, ch tuple
@@ -1852,10 +1867,10 @@ def parse_model(d, ch, verbose=True):
             c2 = ch[f]
             args = [c2, *args]
         elif m in {CoordAtt}:
-            args=[ch[f],*args]
+            args = [ch[f], *args]
         elif m in {ECA}:
             c2 = ch[f]
-            args=[c2,*args]
+            args = [c2, *args]
         elif m is C3STR:
             c1, c2 = ch[f], args[0]
             if c2 != nc:  # 如果不是分类头
